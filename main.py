@@ -1,13 +1,13 @@
 import pygame
 import random
 from block import Block, Soil
-from item import Item
+from item import Item, ItemType, Plant
 from character import Character
 
-# Initialize Pygame
+# 初始化 Pygame
 pygame.init()
 
-# Define constants
+# 定义常量
 WIDTH, HEIGHT = 800, 600
 TILE_SIZE = 32
 WHITE = (255, 255, 255)
@@ -18,45 +18,75 @@ INVENTORY_WIDTH = 200
 INVENTORY_HEIGHT = 300
 INVENTORY_BG_COLOR = (220, 220, 220)
 TIP_BG_COLOR = (255, 255, 200)
-HIGHLIGHT_COLOR = (255, 0, 0)  # Color for highlighting the land
+HIGHLIGHT_COLOR = (255, 0, 0)
 
-# Create the screen
+# 创建屏幕
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Simple Stardew Valley")
-
-# Load the character image
-player_image = pygame.Surface((TILE_SIZE, TILE_SIZE))
-player_image.fill((255, 0, 0))  # Red square represents the character
 
 # Create a character instance
 player = Character("Player", WIDTH // 2, HEIGHT // 2)
 
-# Add items to the player's inventory
-hoe = Item(1, "Hoe", "A tool for cultivating land")
-seed = Item(2, "Seed", "A seed for planting crops")
-player.add_item(hoe)
-player.add_item(seed)
+# 定义小麦种子
+wheat_seed = Item(2, "Wheat Seed", "A seed for planting wheat")
+# 定义小麦产品
+wheat_product = Item(5, "Wheat", "Mature wheat, can be sold or used")
+# 定义小麦植物
+wheat = Plant(4, "Wheat Plant", wheat_seed, 100, wheat_product, 5)
 
-# Create a list of land blocks
+# 定义工具
+hoe = Item(1, "Hoe", ItemType.TOOL, "Used to cultivate land")
+
+# 添加物品到玩家背包
+player.add_item(hoe)
+player.add_item(wheat_seed)
+
+# 创建土地块列表
 blocks = []
 for y in range(0, HEIGHT, TILE_SIZE):
     for x in range(0, WIDTH, TILE_SIZE):
         block = Soil((x, y))
         blocks.append(block)
 
-# Game main loop
+# 游戏主循环
 running = True
 clock = pygame.time.Clock()
-grow_timer = 0  # Growth timer
-is_inventory_open = False  # Inventory open flag
+grow_timer = 0
+is_inventory_open = False
+
+
+def draw_player(screen, x, y):
+    # 绘制头部，用圆形表示
+    head_radius = TILE_SIZE // 4
+    pygame.draw.circle(screen, (255, 204, 153), (x + TILE_SIZE // 2, y + head_radius), head_radius)
+
+    # 绘制身体，用矩形表示
+    body_height = TILE_SIZE // 2
+    pygame.draw.rect(screen, (0, 0, 255), (x + TILE_SIZE // 4, y + 2 * head_radius, TILE_SIZE // 2, body_height))
+
+    # 绘制手臂
+    arm_length = TILE_SIZE // 3
+    pygame.draw.line(screen, (255, 204, 153), (x + TILE_SIZE // 4, y + 2 * head_radius + body_height // 3),
+                     (x + TILE_SIZE // 4 - arm_length, y + 2 * head_radius + body_height // 3), 3)
+    pygame.draw.line(screen, (255, 204, 153), (x + 3 * TILE_SIZE // 4, y + 2 * head_radius + body_height // 3),
+                     (x + 3 * TILE_SIZE // 4 + arm_length, y + 2 * head_radius + body_height // 3), 3)
+
+    # 绘制腿部
+    leg_length = TILE_SIZE // 3
+    pygame.draw.line(screen, (0, 0, 0), (x + TILE_SIZE // 3, y + 2 * head_radius + body_height),
+                     (x + TILE_SIZE // 3, y + 2 * head_radius + body_height + leg_length), 3)
+    pygame.draw.line(screen, (0, 0, 0), (x + 2 * TILE_SIZE // 3, y + 2 * head_radius + body_height),
+                     (x + 2 * TILE_SIZE // 3, y + 2 * head_radius + body_height + leg_length), 3)
+
 
 while running:
+    current_time = pygame.time.get_ticks()  # 每次循环获取当前时间
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                # Get the land block where the player is currently located
+                # 获取玩家当前所在的土地块
                 player_tile_x = player.x // TILE_SIZE * TILE_SIZE
                 player_tile_y = player.y // TILE_SIZE * TILE_SIZE
                 target_block = None
@@ -67,19 +97,34 @@ while running:
                         break
                 if target_block:
                     print(f"Found target block at position: {target_block.position}")
-                    if any(item.id == 1 for item in player.inventory):  # Has a hoe
-                        print(f"Cultivating land at {target_block.position}")
-                        target_block.change_state(1)  # Cultivate the land
-                    elif any(item.id == 2 for item in player.inventory) and target_block.state == 1:
-                        target_block.plant_crop(seed)  # Plant a crop
-                    elif target_block.plant != 0 and target_block.growth_stage == 5:
+                    land_state = target_block.state
+                    has_hoe = any(item.id == 1 for item in player.inventory)
+                    has_wheat_seed = any(item.id == 2 for item in player.inventory)
+
+                    if land_state == 0:  # 土地未开垦
+                        if has_hoe:
+                            target_block.cultivate()
+                    elif land_state == 1 and target_block.plant is None:  # 开垦未播种
+                        if has_wheat_seed:
+                            target_block.plant_crop(wheat, current_time)
+                            # 从背包移除种子
+                            for item in player.inventory[:]:
+                                if item.id == 2:
+                                    player.inventory.remove(item)
+                                    break
+                    else:
                         harvested = target_block.harvest()
                         if harvested:
-                            player.add_item(harvested)
+                            player.add_item(harvested.product_item)
+                            # 随机生成 1 - 2 个种子
+                            seed_count = random.randint(harvested.seed_harvested_min, harvested.seed_harvested_max)
+                            for _ in range(seed_count):
+                                player.add_item(harvested.seed)
+                            print(f"Harvested {harvested} and {seed_count} {harvested.seed}")
             elif event.key == pygame.K_e:
                 is_inventory_open = not is_inventory_open
 
-    # Handle key events, use WASD to control movement
+    # 处理按键事件，使用 WASD 控制移动
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a] and player.x > 0:
         player.x -= MOVE_SPEED
@@ -90,41 +135,43 @@ while running:
     if keys[pygame.K_s] and player.y < HEIGHT - TILE_SIZE:
         player.y += MOVE_SPEED
 
-    # Plant growth logic
-    grow_timer += clock.get_rawtime()
-    if grow_timer >= 5000:  # Grow once every 5 seconds
-        for block in blocks:
-            if isinstance(block, Soil):
-                block.grow()
-        grow_timer = 0
+    # 植物生长逻辑
+    for block in blocks:
+        if isinstance(block, Soil):
+            block.grow(current_time)  # 传入当前时间
 
-    # Draw the background
+    # 绘制背景
     screen.fill(WHITE)
 
-    # Draw land blocks
+    # 绘制土地块
     for block in blocks:
         block.draw(screen)
 
-    # Implement 2.5D effect, simply rotate the character
-    rotated_player = pygame.transform.rotate(player_image, 45)
-    new_rect = rotated_player.get_rect(center=player_image.get_rect(topleft=(player.x, player.y)).center)
-    screen.blit(rotated_player, new_rect.topleft)
+    # Draw the player
+    draw_player(screen, player.x, player.y)
 
-    # Highlight the land block where the player is currently located
+    # 高亮显示玩家当前所在的土地块
     player_tile_x = player.x // TILE_SIZE * TILE_SIZE
     player_tile_y = player.y // TILE_SIZE * TILE_SIZE
     for block in blocks:
         if block.position == (player_tile_x, player_tile_y):
             pygame.draw.rect(screen, HIGHLIGHT_COLOR, (player_tile_x, player_tile_y, TILE_SIZE, TILE_SIZE), 3)
 
-    # Show the inventory interface
+    # 显示背包界面
     if is_inventory_open:
         pygame.draw.rect(screen, INVENTORY_BG_COLOR, (WIDTH - INVENTORY_WIDTH - 10, 10, INVENTORY_WIDTH, INVENTORY_HEIGHT))
         inventory_y = 20
         mouse_x, mouse_y = pygame.mouse.get_pos()
         hovered_item = None
         for item in player.inventory:
-            item_text = FONT.render(item.name, True, BLACK)
+            color = BLACK
+            if item.type == ItemType.TOOL:
+                color = (0, 0, 255)
+            elif item.type == ItemType.SEED:
+                color = (0, 128, 0)
+            elif item.type == ItemType.PRODUCT:
+                color = (139, 69, 19)
+            item_text = FONT.render(item.name, True, color)
             item_rect = item_text.get_rect(topleft=(WIDTH - INVENTORY_WIDTH, inventory_y))
             screen.blit(item_text, item_rect)
             if item_rect.collidepoint(mouse_x, mouse_y):
@@ -137,15 +184,15 @@ while running:
             pygame.draw.rect(screen, TIP_BG_COLOR, desc_rect.inflate(10, 5))
             screen.blit(desc_text, desc_rect)
 
-    # Show key prompts
+    # 显示按键提示
     controls_text = FONT.render("W: Up, A: Left, S: Down, D: Right, SPACE: Interact, E: Inventory", True, BLACK)
     screen.blit(controls_text, (WIDTH - controls_text.get_width() - 10, HEIGHT - 30))
 
-    # Update the display
+    # 更新显示
     pygame.display.flip()
 
-    # Control the frame rate
+    # 控制帧率
     clock.tick(60)
 
-# Quit Pygame
+# 退出 Pygame
 pygame.quit()
