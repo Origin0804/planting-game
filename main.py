@@ -10,9 +10,11 @@ pygame.init()
 # 定义常量
 WIDTH, HEIGHT = 800, 600
 TILE_SIZE = 32
+SKY_COLOR = (135, 206, 235)  # 天空蓝
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
-MOVE_SPEED = 2
+SKY_HEIGHT = 150     # 天空区域高度
+MOVE_SPEED = 5
 FONT = pygame.font.Font(None, 24)
 INVENTORY_WIDTH = 200
 INVENTORY_HEIGHT = 300
@@ -24,9 +26,17 @@ HIGHLIGHT_COLOR = (255, 0, 0)
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Simple Stardew Valley")
 
-# Create a character instance
-player = Character("Player", WIDTH // 2, HEIGHT // 2)
+# 加载人物模型素材
+player_image = pygame.image.load('character_model.png').convert_alpha()
+# 调整图片大小以适应 TILE_SIZE
+player_image = pygame.transform.scale(player_image, (40, 60))
 
+# 后续代码保持不变
+
+# Create a character instance
+player = Character("Player", 
+                  (WIDTH//2),  # 初始网格X
+                  (HEIGHT//2)) # 初始网格Y
 # 定义小麦种子
 wheat_seed = Item(2, "Wheat Seed", "A seed for planting wheat")
 # 定义小麦产品
@@ -42,11 +52,14 @@ player.add_item(hoe)
 player.add_item(wheat_seed)
 
 # 创建土地块列表
+# 计算实际可放置地块的网格数量
+GRID_COLS = WIDTH // TILE_SIZE
+GRID_ROWS = (HEIGHT - SKY_HEIGHT) // 16  # 根据扁矩形高度计算
+
 blocks = []
-for y in range(0, HEIGHT, TILE_SIZE):
-    for x in range(0, WIDTH, TILE_SIZE):
-        block = Soil((x, y))
-        blocks.append(block)
+for grid_y in range(GRID_ROWS):
+    for grid_x in range(GRID_COLS):
+        blocks.append(Soil(grid_x * TILE_SIZE, grid_y * TILE_SIZE))
 
 # 游戏主循环
 running = True
@@ -54,56 +67,32 @@ clock = pygame.time.Clock()
 grow_timer = 0
 is_inventory_open = False
 
-
-def draw_player(screen, x, y):
-    # 绘制头部，用圆形表示
-    head_radius = TILE_SIZE // 4
-    pygame.draw.circle(screen, (255, 204, 153), (x + TILE_SIZE // 2, y + head_radius), head_radius)
-
-    # 绘制身体，用矩形表示
-    body_height = TILE_SIZE // 2
-    pygame.draw.rect(screen, (0, 0, 255), (x + TILE_SIZE // 4, y + 2 * head_radius, TILE_SIZE // 2, body_height))
-
-    # 绘制手臂
-    arm_length = TILE_SIZE // 3
-    pygame.draw.line(screen, (255, 204, 153), (x + TILE_SIZE // 4, y + 2 * head_radius + body_height // 3),
-                     (x + TILE_SIZE // 4 - arm_length, y + 2 * head_radius + body_height // 3), 3)
-    pygame.draw.line(screen, (255, 204, 153), (x + 3 * TILE_SIZE // 4, y + 2 * head_radius + body_height // 3),
-                     (x + 3 * TILE_SIZE // 4 + arm_length, y + 2 * head_radius + body_height // 3), 3)
-
-    # 绘制腿部
-    leg_length = TILE_SIZE // 3
-    pygame.draw.line(screen, (0, 0, 0), (x + TILE_SIZE // 3, y + 2 * head_radius + body_height),
-                     (x + TILE_SIZE // 3, y + 2 * head_radius + body_height + leg_length), 3)
-    pygame.draw.line(screen, (0, 0, 0), (x + 2 * TILE_SIZE // 3, y + 2 * head_radius + body_height),
-                     (x + 2 * TILE_SIZE // 3, y + 2 * head_radius + body_height + leg_length), 3)
-
-
 while running:
+    screen.fill(SKY_COLOR, (0, 0, WIDTH, SKY_HEIGHT))
     current_time = pygame.time.get_ticks()  # 每次循环获取当前时间
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                # 获取玩家当前所在的土地块
-                player_tile_x = player.x // TILE_SIZE * TILE_SIZE
-                player_tile_y = player.y // TILE_SIZE * TILE_SIZE
+                player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
+                player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
                 target_block = None
                 # 精确查找玩家所在的土地块
                 for block in blocks:
-                    if block.position == (player_tile_x, player_tile_y):
+                    if block.grid_x == player_tile_x and block.grid_y == player_tile_y:
                         target_block = block
                         break
                 if target_block:
-                    print(f"Found target block at position: {target_block.position}")
+                    print(f"Found target block at position: {target_block.grid_x}, {target_block.grid_y}")
                     land_state = target_block.state
                     has_hoe = any(item.id == 1 for item in player.inventory)
                     has_wheat_seed = any(item.id == 2 for item in player.inventory)
 
                     if land_state == 0:  # 土地未开垦
                         if has_hoe:
-                            target_block.cultivate()
+
+                            target_block.change_state(1)  # 假设 change_state 1 代表开垦
                     elif land_state == 1 and target_block.plant is None:  # 开垦未播种
                         if has_wheat_seed:
                             target_block.plant_crop(wheat, current_time)
@@ -117,23 +106,26 @@ while running:
                         if harvested:
                             player.add_item(harvested.product_item)
                             # 随机生成 1 - 2 个种子
-                            seed_count = random.randint(harvested.seed_harvested_min, harvested.seed_harvested_max)
+
+                            seed_count = random.randint(1, 2)  # 假设种子收获范围 1 - 2
                             for _ in range(seed_count):
-                                player.add_item(harvested.seed)
-                            print(f"Harvested {harvested} and {seed_count} {harvested.seed}")
+
+
+                                player.add_item(wheat_seed)
+                            print(f"Harvested {harvested} and {seed_count} wheat seeds")
             elif event.key == pygame.K_e:
                 is_inventory_open = not is_inventory_open
 
     # 处理按键事件，使用 WASD 控制移动
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_a] and player.x > 0:
-        player.x -= MOVE_SPEED
-    if keys[pygame.K_d] and player.x < WIDTH - TILE_SIZE:
-        player.x += MOVE_SPEED
-    if keys[pygame.K_w] and player.y > 0:
-        player.y -= MOVE_SPEED
-    if keys[pygame.K_s] and player.y < HEIGHT - TILE_SIZE:
-        player.y += MOVE_SPEED
+    if keys[pygame.K_a] and player.grid_x > 0:
+        player.grid_x -= MOVE_SPEED
+    if keys[pygame.K_d] and player.grid_x < WIDTH - 1:
+        player.grid_x += MOVE_SPEED
+    if keys[pygame.K_w] and player.grid_y > 0:
+        player.grid_y -= MOVE_SPEED
+    if keys[pygame.K_s] and player.grid_y < HEIGHT - 1:
+        player.grid_y += MOVE_SPEED
 
     # 植物生长逻辑
     for block in blocks:
@@ -144,18 +136,25 @@ while running:
     screen.fill(WHITE)
 
     # 绘制土地块
-    for block in blocks:
+    # 在游戏主循环的绘制部分修改为：
+    # 绘制土地块（按深度排序）
+    for block in sorted(blocks, key=lambda b: b.depth):
         block.draw(screen)
 
-    # Draw the player
-    draw_player(screen, player.x, player.y)
 
-    # 高亮显示玩家当前所在的土地块
-    player_tile_x = player.x // TILE_SIZE * TILE_SIZE
-    player_tile_y = player.y // TILE_SIZE * TILE_SIZE
-    for block in blocks:
-        if block.position == (player_tile_x, player_tile_y):
-            pygame.draw.rect(screen, HIGHLIGHT_COLOR, (player_tile_x, player_tile_y, TILE_SIZE, TILE_SIZE), 3)
+    Character.draw_player(screen, player.grid_x, player.grid_y)
+    
+    # 在绘制高亮框的位置修改：
+    player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
+    player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE 
+
+    rect_width = TILE_SIZE
+    rect_height = TILE_SIZE // 2
+    pygame.draw.rect(screen, HIGHLIGHT_COLOR, (player_tile_x, SKY_HEIGHT + player_tile_y/2, rect_width, rect_height), 3)
+
+    # 显示角色坐标
+    coord_text = FONT.render(f"X: {player.grid_x}, Y: {player.grid_y}", True, BLACK)
+    screen.blit(coord_text, (10, 10))
 
     # 显示背包界面
     if is_inventory_open:

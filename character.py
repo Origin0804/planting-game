@@ -1,14 +1,22 @@
+import pygame
+from block import TILE_SIZE
+
+SCREEN_HEIGHT = 600  # 与main.py中的HEIGHT保持一致
+SKY_HEIGHT = 150     # 天空区域高度
+
 class Character:
-    def __init__(self, name, x, y):
+    def __init__(self, name, grid_x, grid_y):
         """
         Initialize a Character instance
         :param name: The name of the character
-        :param x: The initial x-coordinate of the character
-        :param y: The initial y-coordinate of the character
+        :param grid_x: The initial grid x-coordinate of the character
+        :param grid_y: The initial grid y-coordinate of the character
         """
         self.name = name
-        self.x = x
-        self.y = y
+        self.grid_x = grid_x  # 网格坐标X
+        self.grid_y = grid_y  # 网格坐标Y
+        self.screen_x = 0      # 实际屏幕坐标（通过grid计算）
+        self.screen_y = 0
         self.inventory = []  # Item list
 
     def add_item(self, item):
@@ -36,3 +44,16 @@ class Character:
         :return: The character's inventory list
         """
         return self.inventory
+
+    def draw_player(screen, grid_x, grid_y):
+        # 计算玩家在扁矩形系统中的位置
+
+        # 将贴图加载移到函数外部（只需加载一次）
+        if not hasattr(Character, 'player_image'):
+            Character.player_image = pygame.transform.scale(
+                pygame.image.load('character_model.png').convert_alpha(), 
+                (40, 60)
+            )
+        screen_x = grid_x
+        screen_y = SKY_HEIGHT + grid_y / 2 - 40  # 站在地块上方
+        screen.blit(Character.player_image, (screen_x, screen_y))
