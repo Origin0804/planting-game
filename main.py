@@ -56,10 +56,14 @@ player.add_item(wheat_seed)
 GRID_COLS = WIDTH // TILE_SIZE
 GRID_ROWS = (HEIGHT - SKY_HEIGHT) // 16  # 根据扁矩形高度计算
 
+all_objects = []
+
 blocks = []
 for grid_y in range(GRID_ROWS):
     for grid_x in range(GRID_COLS):
         blocks.append(Soil(grid_x * TILE_SIZE, grid_y * TILE_SIZE))
+for block in blocks:
+    all_objects.append(('block', block))
 
 # 游戏主循环
 running = True
@@ -77,6 +81,10 @@ while running:
             if event.key == pygame.K_SPACE:
                 player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
                 player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
+
+
+
+
                 target_block = None
                 # 精确查找玩家所在的土地块
                 for block in blocks:
@@ -116,6 +124,13 @@ while running:
             elif event.key == pygame.K_e:
                 is_inventory_open = not is_inventory_open
 
+
+    all_objects.append(('player', player))
+
+    # 按深度排序（从小到大，先绘制后面的物体）
+    all_objects.sort(key=lambda x: x[1].depth)
+
+
     # 处理按键事件，使用 WASD 控制移动
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a] and player.grid_x > 0:
@@ -135,14 +150,16 @@ while running:
     # 绘制背景
     screen.fill(WHITE)
 
-    # 绘制土地块
-    # 在游戏主循环的绘制部分修改为：
-    # 绘制土地块（按深度排序）
-    for block in sorted(blocks, key=lambda b: b.depth):
-        block.draw(screen)
+    # 按顺序绘制所有对象
+    for obj in all_objects:
+        if obj[0] == 'block':
+            obj[1].draw(screen)
+        elif obj[0] == 'player':
+            # 玩家绘制需要额外处理
+            Character.draw_player(screen, player.grid_x, player.grid_y)
 
 
-    Character.draw_player(screen, player.grid_x, player.grid_y)
+    #Character.draw_player(screen, player.grid_x, player.grid_y)
     
     # 在绘制高亮框的位置修改：
     player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE

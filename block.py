@@ -34,7 +34,7 @@ class Block:
     @property
     def depth(self):
         """用于绘制排序的深度值"""
-        return self.grid_x + self.grid_y
+        return self.grid_x + self.grid_y * 100
 
     def draw(self, screen):
         # 扁矩形绘制（宽32，高16）

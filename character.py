@@ -19,6 +19,11 @@ class Character:
         self.screen_y = 0
         self.inventory = []  # Item list
 
+    @property
+    def depth(self):
+        """用于绘制排序的深度值"""
+        return self.grid_x + self.grid_y * 100
+
     def add_item(self, item):
         """
         Add an item to the character's inventory
@@ -55,5 +60,5 @@ class Character:
                 (40, 60)
             )
         screen_x = grid_x
-        screen_y = SKY_HEIGHT + grid_y / 2 - 40  # 站在地块上方
+        screen_y = SKY_HEIGHT + grid_y / 2 - 60  # 站在地块上方
         screen.blit(Character.player_image, (screen_x, screen_y))
