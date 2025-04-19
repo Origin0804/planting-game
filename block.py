@@ -38,7 +38,7 @@ class Block:
 
     def draw(self, screen):
         # 扁矩形绘制（宽32，高16）
-        pygame.draw.rect(screen, (139, 69, 19), 
+        pygame.draw.rect(screen, (150, 80, 30), 
                         (self.screen_x, self.screen_y, 32, 16))
 
     def change_state(self, new_state):
@@ -108,6 +108,10 @@ class Soil(Block):
             # 让提示框显示在植物上方
             text_rect = text.get_rect(center=(x + TILE_SIZE // 2, plant_y - 10))
             screen.blit(text, text_rect)
+        elif self.state == 1:
+            # 绘制未开垦的土地
+            pygame.draw.rect(screen, (139, 69, 19), (self.screen_x, self.screen_y, 32, 16))
+
     
     
     def cultivate(self):
