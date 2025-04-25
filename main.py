@@ -31,7 +31,15 @@ player_image = pygame.image.load('character_model.png').convert_alpha()
 # 调整图片大小以适应 TILE_SIZE
 player_image = pygame.transform.scale(player_image, (40, 60))
 
-# 后续代码保持不变
+# 加载云的图片
+cloud_image = pygame.image.load('cloud.png').convert_alpha()
+# 可以根据需要调整云的大小
+cloud_image = pygame.transform.scale(cloud_image, (100, 50))
+
+# 初始化云的位置和移动速度
+cloud_x = random.randint(0, WIDTH)
+cloud_y = random.randint(0, SKY_HEIGHT - cloud_image.get_height())
+cloud_speed = 1
 
 # Create a character instance
 player = Character("Player", 
@@ -73,6 +81,16 @@ is_inventory_open = False
 
 while running:
     screen.fill(SKY_COLOR, (0, 0, WIDTH, SKY_HEIGHT))
+
+    # 更新云的位置
+    cloud_x += cloud_speed
+    if cloud_x > WIDTH:
+        cloud_x = -cloud_image.get_width()
+        cloud_y = random.randint(0, SKY_HEIGHT - cloud_image.get_height())
+
+    # 绘制云
+    screen.blit(cloud_image, (cloud_x, cloud_y))
+
     current_time = pygame.time.get_ticks()  # 每次循环获取当前时间
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -81,9 +99,6 @@ while running:
             if event.key == pygame.K_SPACE:
                 player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
                 player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
-
-
-
 
                 target_block = None
                 # 精确查找玩家所在的土地块
@@ -99,7 +114,6 @@ while running:
 
                     if land_state == 0:  # 土地未开垦
                         if has_hoe:
-
                             target_block.change_state(1)  # 假设 change_state 1 代表开垦
                     elif land_state == 1 and target_block.plant is None:  # 开垦未播种
                         if has_wheat_seed:
@@ -114,22 +128,17 @@ while running:
                         if harvested:
                             player.add_item(harvested.product_item)
                             # 随机生成 1 - 2 个种子
-
                             seed_count = random.randint(1, 2)  # 假设种子收获范围 1 - 2
                             for _ in range(seed_count):
-
-
                                 player.add_item(wheat_seed)
                             print(f"Harvested {harvested} and {seed_count} wheat seeds")
             elif event.key == pygame.K_e:
                 is_inventory_open = not is_inventory_open
 
-
     all_objects.append(('player', player))
 
     # 按深度排序（从小到大，先绘制后面的物体）
     all_objects.sort(key=lambda x: x[1].depth)
-
 
     # 处理按键事件，使用 WASD 控制移动
     keys = pygame.key.get_pressed()
@@ -147,9 +156,6 @@ while running:
         if isinstance(block, Soil):
             block.grow(current_time)  # 传入当前时间
 
-    # 绘制背景
-    screen.fill(WHITE)
-
     # 按顺序绘制所有对象
     for obj in all_objects:
         if obj[0] == 'block':
@@ -158,12 +164,9 @@ while running:
             # 玩家绘制需要额外处理
             Character.draw_player(screen, player.grid_x, player.grid_y)
 
-
-    #Character.draw_player(screen, player.grid_x, player.grid_y)
-    
     # 在绘制高亮框的位置修改：
     player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
-    player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE 
+    player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
 
     rect_width = TILE_SIZE
     rect_height = TILE_SIZE // 2
