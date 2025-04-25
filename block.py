@@ -1,4 +1,5 @@
 import pygame
+import random
 
 # 定义常量
 PLANT_COLOR = (0, 128, 0)
@@ -17,6 +18,12 @@ WHEAT_TEXTURES = [
 # 在文件顶部添加
 SCREEN_HEIGHT = 600  # 与main.py中的HEIGHT保持一致
 SKY_HEIGHT = 150     # 天空区域高度
+
+# 一次性加载所有泥土贴图
+SOIL_TEXTURES = [
+    pygame.transform.scale(pygame.image.load(f'soil{i}.png'), (32, 16)) 
+    for i in range(1, 5)
+]
 
 class Block:
     def __init__(self, grid_x, grid_y):
@@ -57,11 +64,14 @@ class Soil(Block):
         :param position: 土地的位置，格式: (x, y)
         :param state: 土地的状态，0 表示未开垦，1 表示已开垦，默认值为 0
         :param plant: 种植的作物，None 表示没有种植
+        :param picture_number: 贴图编号，默认为 0
         """
         super().__init__(position, state)
         self.plant = plant
         self.growth_stage = 0
         self.last_growth_time = 0  # 添加生长时间记录属性
+        # 随机选择 0 到 3 之间的索引，对应 SOIL_TEXTURES 列表
+        self.picture_index = random.randint(0, 3)
 
     def grow(self, current_time):
         """植物生长"""
@@ -95,7 +105,10 @@ class Soil(Block):
             return plant
         return None
     def draw(self, screen):
-        super().draw(screen)
+        # 从预加载的贴图列表中获取对应的泥土贴图
+        soil_image = SOIL_TEXTURES[self.picture_index]
+        screen.blit(soil_image, (self.screen_x, self.screen_y))
+
         if self.plant is not None:
             x, y = self.screen_x, self.screen_y
             # 根据生长阶段选择贴图
