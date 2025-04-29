@@ -1,5 +1,6 @@
 import pygame
 import random
+import json
 from block import Block, Soil
 from item import Item, ItemType, Plant
 from character import Character
@@ -22,6 +23,56 @@ INVENTORY_BG_COLOR = (220, 220, 220)
 TIP_BG_COLOR = (255, 255, 200)
 HIGHLIGHT_COLOR = (255, 0, 0)
 
+def save_game(player, blocks):
+    game_state = {
+        "player": {
+            "name": player.name,
+            "grid_x": player.grid_x,
+            "grid_y": player.grid_y,
+            "inventory": [{"id": item.id, "type": item.type.value, "name": item.name, "description": item.description} for item in player.inventory]
+        },
+        "blocks": [
+            {
+                "grid_x": block.grid_x,
+                "grid_y": block.grid_y,
+                "state": block.state,
+                "plant": {
+                    "id": block.plant.id if block.plant else None,
+                    "growth_stage": block.growth_stage,
+                    "last_growth_time": block.last_growth_time
+                } if block.plant else None
+            } for block in blocks
+        ]
+    }
+    with open("game_state.json", "w") as f:
+        json.dump(game_state, f, indent=4)
+
+# 加载游戏状态
+def load_game():
+    try:
+        with open("game_state.json", "r") as f:
+            game_state = json.load(f)
+            # 重新创建玩家对象
+            player_data = game_state["player"]
+            player = Character(player_data["name"], player_data["grid_x"], player_data["grid_y"])
+            for item_data in player_data["inventory"]:
+                item_type = ItemType(item_data["type"])
+                item = Item(item_data["id"], item_data["name"], item_type, item_data["description"])
+                player.add_item(item)
+
+            # 重新创建土地块
+            blocks = []
+            for block_data in game_state["blocks"]:
+                soil = Soil((block_data["grid_x"], block_data["grid_y"]), block_data["state"])
+                if block_data["plant"] and block_data["plant"]["id"] == wheat.id:
+                    soil.plant = wheat
+                    soil.growth_stage = block_data["plant"]["growth_stage"]
+                    soil.last_growth_time = block_data["plant"]["last_growth_time"]
+                blocks.append(soil)
+            return player, blocks
+    except FileNotFoundError:
+        return None, None
+
 # 创建屏幕
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Simple Stardew Valley")
@@ -41,38 +92,38 @@ cloud_x = random.randint(0, WIDTH)
 cloud_y = random.randint(0, SKY_HEIGHT - cloud_image.get_height())
 cloud_speed = 1
 
-# Create a character instance
-player = Character("Player", 
-                  (WIDTH//2),  # 初始网格X
-                  (HEIGHT//2)) # 初始网格Y
+
 # 定义小麦种子
-wheat_seed = Item(2, "Wheat Seed", "A seed for planting wheat")
+wheat_seed = Item(2, "Wheat Seed", ItemType.SEED, "A seed for planting wheat")
 # 定义小麦产品
-wheat_product = Item(5, "Wheat", "Mature wheat, can be sold or used")
+wheat_product = Item(5, "Wheat", ItemType.PRODUCT, "Mature wheat, can be sold or used")
 # 定义小麦植物
 wheat = Plant(4, "Wheat Plant", wheat_seed, 100, wheat_product, 5)
 
 # 定义工具
 hoe = Item(1, "Hoe", ItemType.TOOL, "Used to cultivate land")
 
-# 添加物品到玩家背包
-player.add_item(hoe)
-player.add_item(wheat_seed)
+# 初始化游戏状态
+player, blocks = load_game()
+if player is None or blocks is None:
+    # 如果没有保存的游戏状态，初始化新游戏
+    player = Character("Player", WIDTH // 2, HEIGHT // 2)
+    # 添加物品到玩家背包
+    player.add_item(hoe)
+    player.add_item(wheat_seed)
 
-# 创建土地块列表
-# 计算实际可放置地块的网格数量
-GRID_COLS = WIDTH // TILE_SIZE
-GRID_ROWS = (HEIGHT - SKY_HEIGHT) // 16  # 根据扁矩形高度计算
+    # 创建土地块列表
+    GRID_COLS = WIDTH // TILE_SIZE
+    GRID_ROWS = (HEIGHT - SKY_HEIGHT) // 16
+
+    blocks = []
+    for grid_y in range(GRID_ROWS):
+        for grid_x in range(GRID_COLS):
+            blocks.append(Soil((grid_x * TILE_SIZE, grid_y * TILE_SIZE)))
 
 all_objects = []
-
-blocks = []
-for grid_y in range(GRID_ROWS):
-    for grid_x in range(GRID_COLS):
-        blocks.append(Soil(grid_x * TILE_SIZE, grid_y * TILE_SIZE))
 for block in blocks:
     all_objects.append(('block', block))
-
 # 游戏主循环
 running = True
 clock = pygame.time.Clock()
@@ -94,11 +145,12 @@ while running:
     current_time = pygame.time.get_ticks()  # 每次循环获取当前时间
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
+            save_game(player, blocks)
             running = False
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
-                player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
-                player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
+                player_tile_x = round(player.grid_x / TILE_SIZE) * TILE_SIZE
+                player_tile_y = round(player.grid_y / TILE_SIZE) * TILE_SIZE
 
                 target_block = None
                 # 精确查找玩家所在的土地块
@@ -128,12 +180,24 @@ while running:
                         if harvested:
                             player.add_item(harvested.product_item)
                             # 随机生成 1 - 2 个种子
-                            seed_count = random.randint(1, 2)  # 假设种子收获范围 1 - 2
+                            seed_count = random.randint(wheat.seed_harvested_min, wheat.seed_harvested_max)
                             for _ in range(seed_count):
                                 player.add_item(wheat_seed)
-                            print(f"Harvested {harvested} and {seed_count} wheat seeds")
+                            print(f"Harvested {harvested.product_item.name} and {seed_count} wheat seeds")
             elif event.key == pygame.K_e:
                 is_inventory_open = not is_inventory_open
+            elif event.key == pygame.K_s:
+                save_game(player, blocks)
+                print("Game saved.")
+            elif event.key == pygame.K_l:
+                player, blocks = load_game()
+                if player and blocks:
+                    all_objects = []
+                    for block in blocks:
+                        all_objects.append(('block', block))
+                    print("Game loaded.")
+                else:
+                    print("No saved game found.")
 
     all_objects.append(('player', player))
 
@@ -165,12 +229,12 @@ while running:
             Character.draw_player(screen, player.grid_x, player.grid_y)
 
     # 在绘制高亮框的位置修改：
-    player_tile_x = round(player.grid_x/TILE_SIZE)*TILE_SIZE
-    player_tile_y = round(player.grid_y/TILE_SIZE)*TILE_SIZE
+    player_tile_x = round(player.grid_x / TILE_SIZE) * TILE_SIZE
+    player_tile_y = round(player.grid_y / TILE_SIZE) * TILE_SIZE
 
     rect_width = TILE_SIZE
     rect_height = TILE_SIZE // 2
-    pygame.draw.rect(screen, HIGHLIGHT_COLOR, (player_tile_x, SKY_HEIGHT + player_tile_y/2, rect_width, rect_height), 3)
+    pygame.draw.rect(screen, HIGHLIGHT_COLOR, (player_tile_x, SKY_HEIGHT + player_tile_y / 2, rect_width, rect_height), 3)
 
     # 显示角色坐标
     coord_text = FONT.render(f"X: {player.grid_x}, Y: {player.grid_y}", True, BLACK)
@@ -204,7 +268,7 @@ while running:
             screen.blit(desc_text, desc_rect)
 
     # 显示按键提示
-    controls_text = FONT.render("W: Up, A: Left, S: Down, D: Right, SPACE: Interact, E: Inventory", True, BLACK)
+    controls_text = FONT.render("W: Up, A: Left, S: Down, D: Right, SPACE: Interact, E: Inventory, S: Save, L: Load", True, BLACK)
     screen.blit(controls_text, (WIDTH - controls_text.get_width() - 10, HEIGHT - 30))
 
     # 更新显示

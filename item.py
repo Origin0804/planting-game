@@ -1,5 +1,6 @@
-# 定义物品类型类
-class ItemType:
+from enum import Enum
+
+class ItemType(Enum):
     TOOL = 1
     SEED = 2
     PLANT = 3

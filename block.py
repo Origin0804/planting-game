@@ -64,9 +64,10 @@ class Soil(Block):
         :param position: 土地的位置，格式: (x, y)
         :param state: 土地的状态，0 表示未开垦，1 表示已开垦，默认值为 0
         :param plant: 种植的作物，None 表示没有种植
-        :param picture_number: 贴图编号，默认为 0
         """
-        super().__init__(position, state)
+        grid_x, grid_y = position
+        super().__init__(grid_x, grid_y)
+        self.state = state
         self.plant = plant
         self.growth_stage = 0
         self.last_growth_time = 0  # 添加生长时间记录属性
