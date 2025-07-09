@@ -130,6 +130,13 @@ clock = pygame.time.Clock()
 grow_timer = 0
 is_inventory_open = False
 
+# 添加背包相关新常量
+ITEM_SIZE = 50                # 物品格子尺寸（宽高）
+INVENTORY_PADDING = 10         # 背包内边距
+INVENTORY_COLUMNS = 4          # 每行显示物品数量
+ITEM_SPACING = 5               # 物品之间的间距
+INVENTORY_TITLE_HEIGHT = 30    # 背包标题区域高度
+
 while running:
     screen.fill(SKY_COLOR, (0, 0, WIDTH, SKY_HEIGHT))
 
@@ -184,8 +191,17 @@ while running:
                             for _ in range(seed_count):
                                 player.add_item(wheat_seed)
                             print(f"Harvested {harvested.product_item.name} and {seed_count} wheat seeds")
-            elif event.key == pygame.K_e:
-                is_inventory_open = not is_inventory_open
+                        elif event.key == pygame.K_e:
+                            # 检查背包是否已满
+                            if len(player.inventory) < INVENTORY_SIZE:
+                                # 背包未满，添加物品
+                                player.add_item(harvested.product_item)
+                                print(f"Added {harvested.product_item.name} to inventory")
+                            else:
+                                # 背包已满，提示无法添加
+                                print("Inventory is full. Cannot add item.")
+                        elif event.key == pygame.K_i:
+                            is_inventory_open = not is_inventory_open
             elif event.key == pygame.K_s:
                 save_game(player, blocks)
                 print("Game saved.")
@@ -198,6 +214,12 @@ while running:
                     print("Game loaded.")
                 else:
                     print("No saved game found.")
+            # 添加按下 Q 键保存游戏并退出的逻辑
+            elif event.key == pygame.K_q:
+                save_game(player, blocks)
+                print("Game saved. Exiting...")
+                running = False
+
 
     all_objects.append(('player', player))
 
@@ -242,30 +264,77 @@ while running:
 
     # 显示背包界面
     if is_inventory_open:
-        pygame.draw.rect(screen, INVENTORY_BG_COLOR, (WIDTH - INVENTORY_WIDTH - 10, 10, INVENTORY_WIDTH, INVENTORY_HEIGHT))
-        inventory_y = 20
+        # 动态计算背包尺寸（根据物品数量）
+        item_count = len(player.inventory)
+        rows = (item_count + INVENTORY_COLUMNS - 1) // INVENTORY_COLUMNS
+        inventory_width = INVENTORY_PADDING*2 + INVENTORY_COLUMNS*(ITEM_SIZE + ITEM_SPACING)
+        inventory_height = INVENTORY_PADDING*2 + INVENTORY_TITLE_HEIGHT + rows*(ITEM_SIZE + ITEM_SPACING)
+        inventory_height = min(inventory_height, HEIGHT - 20)  # 限制最大高度
+        inventory_rect = pygame.Rect(WIDTH - inventory_width - 10, 10, inventory_width, inventory_height)
+        
+        # 绘制背包背景
+        pygame.draw.rect(screen, INVENTORY_BG_COLOR, inventory_rect)
+        pygame.draw.rect(screen, BLACK, inventory_rect, 2)  # 添加边框
+        
+        # 绘制背包标题
+        title_text = FONT.render("Inventory", True, BLACK)
+        screen.blit(title_text, (inventory_rect.x + INVENTORY_PADDING, inventory_rect.y + INVENTORY_PADDING))
+        
+        # 绘制物品格子
         mouse_x, mouse_y = pygame.mouse.get_pos()
+        hovered_rect = None
         hovered_item = None
-        for item in player.inventory:
-            color = BLACK
+        
+        for index, item in enumerate(player.inventory):
+            # 计算网格位置
+            row = index // INVENTORY_COLUMNS
+            col = index % INVENTORY_COLUMNS
+            x = inventory_rect.x + INVENTORY_PADDING + col*(ITEM_SIZE + ITEM_SPACING)
+            y = inventory_rect.y + INVENTORY_TITLE_HEIGHT + row*(ITEM_SIZE + ITEM_SPACING) + INVENTORY_PADDING
+            
+            # 绘制物品背景框
+            item_rect = pygame.Rect(x, y, ITEM_SIZE, ITEM_SIZE)
+            pygame.draw.rect(screen, WHITE, item_rect)  # 白色内背景
+            # 根据物品类型绘制边框
+            border_color = BLACK
             if item.type == ItemType.TOOL:
-                color = (0, 0, 255)
+                border_color = (0, 0, 255)    # 蓝色-工具
             elif item.type == ItemType.SEED:
-                color = (0, 128, 0)
+                border_color = (0, 128, 0)    # 绿色-种子
             elif item.type == ItemType.PRODUCT:
-                color = (139, 69, 19)
-            item_text = FONT.render(item.name, True, color)
-            item_rect = item_text.get_rect(topleft=(WIDTH - INVENTORY_WIDTH, inventory_y))
-            screen.blit(item_text, item_rect)
+                border_color = (139, 69, 19)   # 棕色-产品
+            pygame.draw.rect(screen, border_color, item_rect, 2)
+            
+            # 绘制物品名称（居中显示）
+            item_text = FONT.render(item.name, True, BLACK)
+            text_pos = (x + (ITEM_SIZE - item_text.get_width())//2, 
+                        y + (ITEM_SIZE - item_text.get_height())//2)
+            screen.blit(item_text, text_pos)
+            
+            # 悬停检测
             if item_rect.collidepoint(mouse_x, mouse_y):
+                hovered_rect = item_rect
                 hovered_item = item
-            inventory_y += 30
-
+        
+        # 绘制悬停高亮和提示
         if hovered_item:
+            # 高亮当前悬停的物品格子
+            if hovered_rect:
+                pygame.draw.rect(screen, HIGHLIGHT_COLOR, hovered_rect, 3)
+            
+            # 显示物品描述（跟随鼠标位置）
             desc_text = FONT.render(hovered_item.description, True, BLACK)
-            desc_rect = desc_text.get_rect(topleft=(WIDTH - INVENTORY_WIDTH, inventory_y))
-            pygame.draw.rect(screen, TIP_BG_COLOR, desc_rect.inflate(10, 5))
-            screen.blit(desc_text, desc_rect)
+            # 计算提示位置（避免超出屏幕）
+            tip_x = mouse_x + 10
+            tip_y = mouse_y + 10
+            if tip_x + desc_text.get_width() + 20 > WIDTH:
+                tip_x = mouse_x - desc_text.get_width() - 20
+            if tip_y + desc_text.get_height() + 10 > HEIGHT:
+                tip_y = mouse_y - desc_text.get_height() - 10
+            # 绘制提示背景和文字
+            desc_bg_rect = desc_text.get_rect(topleft=(tip_x, tip_y)).inflate(10, 5)
+            pygame.draw.rect(screen, TIP_BG_COLOR, desc_bg_rect)
+            screen.blit(desc_text, (tip_x, tip_y))
 
     # 显示按键提示
     controls_text = FONT.render("W: Up, A: Left, S: Down, D: Right, SPACE: Interact, E: Inventory, S: Save, L: Load", True, BLACK)
