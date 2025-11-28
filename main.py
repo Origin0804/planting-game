@@ -23,6 +23,12 @@ TIP_BG_COLOR = (255, 255, 200)
 HIGHLIGHT_COLOR = (255, 0, 0)
 SHOP_BG_COLOR = (200, 200, 180)
 HUD_BG_COLOR = (50, 50, 50, 180)
+NOTIFICATION_BG_COLOR = (0, 0, 0, 180)
+DEFAULT_SELL_PRICE = 10
+
+# 时间常量（毫秒）
+SEASON_DURATION = 120 * 1000  # 120秒换季
+DAY_DURATION = 30 * 1000  # 30秒一天
 
 # 季节颜色
 SEASON_COLORS = {
@@ -79,10 +85,8 @@ clock = pygame.time.Clock()
 game_state = GameState.PLAYING
 current_season = Season.SPRING
 season_timer = 0
-SEASON_DURATION = 60000  # 60秒换季
 day_count = 1
 day_timer = 0
-DAY_DURATION = 30000  # 30秒一天
 shop_scroll = 0
 notification_text = ""
 notification_timer = 0
@@ -339,7 +343,7 @@ def draw_notification(screen):
         
         # 背景
         bg_rect = notif_rect.inflate(20, 10)
-        pygame.draw.rect(screen, (0, 0, 0, 180), bg_rect)
+        pygame.draw.rect(screen, NOTIFICATION_BG_COLOR, bg_rect)
         pygame.draw.rect(screen, (100, 200, 100), bg_rect, 2)
         screen.blit(notif_surface, notif_rect)
 
@@ -411,7 +415,7 @@ while running:
                 for inv_item in player.inventory[:]:
                     item = inv_item['item']
                     if item.type == ItemType.PRODUCT:
-                        sell_price = getattr(item, 'sell_price', 10)
+                        sell_price = getattr(item, 'sell_price', DEFAULT_SELL_PRICE)
                         sold_gold += sell_price * inv_item['count']
                         sold_count += inv_item['count']
                         player.inventory.remove(inv_item)

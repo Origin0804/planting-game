@@ -1,3 +1,6 @@
+from item import ItemType
+
+
 class Character:
     def __init__(self, name, x, y, gold=100):
         """
@@ -90,7 +93,6 @@ class Character:
     
     def get_seeds(self):
         """Get all seeds in inventory"""
-        from item import ItemType
         seeds = []
         for inv_item in self.inventory:
             if inv_item['item'].type == ItemType.SEED and inv_item['count'] > 0:
