@@ -7,6 +7,7 @@ TILE_SIZE = 32
 # 初始化字体
 pygame.font.init()
 FONT = pygame.font.Font(None, 24)  # 可以根据需要调整字体大小
+SMALL_FONT = pygame.font.Font(None, 18)
 
 class Block:
     def __init__(self, position, state=0):
@@ -51,13 +52,30 @@ class Soil(Block):
         self.plant = plant
         self.growth_stage = 0
         self.last_growth_time = 0  # 添加生长时间记录属性
+        self.is_watered = False  # 是否已浇水
+        self.water_time = 0  # 浇水时间
+
+    def water(self, current_time):
+        """浇水"""
+        if self.state == 1 and not self.is_watered:
+            self.is_watered = True
+            self.water_time = current_time
+            return True
+        return False
 
     def grow(self, current_time):
         """植物生长"""
         if self.plant is not None and self.state == 1:
-            if current_time - self.last_growth_time >= self.plant.growth_time:
+            # 计算生长时间，浇水后生长速度加快
+            growth_time = self.plant.growth_time
+            if self.is_watered:
+                growth_time = int(growth_time / self.plant.water_boost)
+            
+            if current_time - self.last_growth_time >= growth_time:
                 self.growth_stage += 1
                 self.last_growth_time = current_time  # 更新最后生长时间
+                # 每次生长后，浇水效果消失
+                self.is_watered = False
                 if self.growth_stage >= self.plant.max_stages:
                     self.growth_stage = self.plant.max_stages
 
@@ -70,6 +88,7 @@ class Soil(Block):
         if self.state == 1 and self.plant is None:
             self.plant = new_plant
             self.growth_stage = 0
+            self.last_growth_time = current_time
 
     def harvest(self):
         """
@@ -80,24 +99,40 @@ class Soil(Block):
             plant = self.plant
             self.plant = None
             self.growth_stage = 0
+            self.is_watered = False
             print(f"Harvesting plant at {self.position}")
             return plant
         return None
 
     def draw(self, screen):
         super().draw(screen)
+        x, y = self.position
+        
+        # 如果已浇水，显示水滴效果
+        if self.is_watered and self.state == 1:
+            # 绘制淡蓝色覆盖层表示浇水
+            water_surface = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+            water_surface.fill((100, 149, 237, 80))  # 半透明蓝色
+            screen.blit(water_surface, (x, y))
+        
         if self.plant is not None:
-            x, y = self.position
+            # 使用植物自己的颜色
+            plant_color = getattr(self.plant, 'color', PLANT_COLOR)
             # 计算植物的大小，根据生长阶段动态变化
-            plant_size = TILE_SIZE * (self.growth_stage / self.plant.max_stages)
+            plant_size = max(4, int(TILE_SIZE * (self.growth_stage / self.plant.max_stages)))
             # 绘制植物矩形，使其居中显示在土地块上
-            pygame.draw.rect(screen, PLANT_COLOR, (x + (TILE_SIZE - plant_size) // 2,
+            pygame.draw.rect(screen, plant_color, (x + (TILE_SIZE - plant_size) // 2,
                                                    y + (TILE_SIZE - plant_size) // 2,
                                                    plant_size, plant_size))
             # 绘制生长阶段数字标注
             text = FONT.render(str(self.growth_stage), True, (255, 255, 255))  # 白色文字
             text_rect = text.get_rect(center=(x + TILE_SIZE // 2, y + TILE_SIZE // 2))
-            screen.blit(text, text_rect)   
+            screen.blit(text, text_rect)
+            
+            # 如果成熟，显示感叹号
+            if self.growth_stage == self.plant.max_stages:
+                ready_text = SMALL_FONT.render("!", True, (255, 255, 0))
+                screen.blit(ready_text, (x + TILE_SIZE - 10, y + 2))
     
     
     def cultivate(self):
