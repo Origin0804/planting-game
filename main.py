@@ -1,7 +1,7 @@
 import pygame
 import random
 from block import Block, Soil
-from item import Item, ItemType, Plant, Season, create_crops
+from item import Item, ItemType, ItemID, Plant, Season, create_crops
 from character import Character
 
 # 初始化 Pygame
@@ -23,7 +23,8 @@ TIP_BG_COLOR = (255, 255, 200)
 HIGHLIGHT_COLOR = (255, 0, 0)
 SHOP_BG_COLOR = (200, 200, 180)
 HUD_BG_COLOR = (50, 50, 50, 180)
-NOTIFICATION_BG_COLOR = (0, 0, 0, 180)
+NOTIFICATION_BG_COLOR = (0, 0, 0)  # 通知背景颜色（黑色，将使用透明表面）
+NOTIFICATION_BG_ALPHA = 180  # 通知背景透明度
 DEFAULT_SELL_PRICE = 10
 
 # 时间常量（毫秒）
@@ -49,8 +50,8 @@ all_crops = create_crops()
 player = Character("Farmer", WIDTH // 2, HEIGHT // 2, gold=200)
 
 # 定义工具
-hoe = Item(1, "Hoe", ItemType.TOOL, "Used to cultivate land", stackable=False)
-watering_can = Item(3, "Watering Can", ItemType.TOOL, "Used to water plants", stackable=False)
+hoe = Item(ItemID.HOE, "Hoe", ItemType.TOOL, "Used to cultivate land", stackable=False)
+watering_can = Item(ItemID.WATERING_CAN, "Watering Can", ItemType.TOOL, "Used to water plants", stackable=False)
 
 # 添加物品到玩家背包
 player.add_item(hoe)
@@ -341,9 +342,11 @@ def draw_notification(screen):
         notif_surface = FONT.render(notification_text, True, WHITE)
         notif_rect = notif_surface.get_rect(center=(WIDTH // 2, HEIGHT - 80))
         
-        # 背景
+        # 使用透明表面绘制背景
         bg_rect = notif_rect.inflate(20, 10)
-        pygame.draw.rect(screen, NOTIFICATION_BG_COLOR, bg_rect)
+        bg_surface = pygame.Surface((bg_rect.width, bg_rect.height), pygame.SRCALPHA)
+        bg_surface.fill((*NOTIFICATION_BG_COLOR, NOTIFICATION_BG_ALPHA))
+        screen.blit(bg_surface, bg_rect.topleft)
         pygame.draw.rect(screen, (100, 200, 100), bg_rect, 2)
         screen.blit(notif_surface, notif_rect)
 
@@ -438,7 +441,7 @@ while running:
                 
                 if target_block:
                     land_state = target_block.state
-                    has_hoe = player.has_item(1)
+                    has_hoe = player.has_item(ItemID.HOE)
                     
                     if land_state == 0:  # 土地未开垦
                         if has_hoe:
@@ -471,7 +474,7 @@ while running:
             
             elif event.key == pygame.K_r and game_state == GameState.PLAYING:
                 # 浇水
-                if player.has_item(3):  # 水壶 ID = 3
+                if player.has_item(ItemID.WATERING_CAN):
                     player_tile_x = player.x // TILE_SIZE * TILE_SIZE
                     player_tile_y = player.y // TILE_SIZE * TILE_SIZE
                     

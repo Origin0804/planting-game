@@ -5,6 +5,39 @@ class ItemType:
     PLANT = 3
     PRODUCT = 4
 
+
+# 定义物品ID常量
+class ItemID:
+    # 工具
+    HOE = 1
+    WATERING_CAN = 3
+    
+    # 小麦相关
+    WHEAT_SEED = 2
+    WHEAT_PLANT = 4
+    WHEAT_PRODUCT = 5
+    
+    # 番茄相关
+    TOMATO_SEED = 10
+    TOMATO_PRODUCT = 11
+    TOMATO_PLANT = 12
+    
+    # 玉米相关
+    CORN_SEED = 20
+    CORN_PRODUCT = 21
+    CORN_PLANT = 22
+    
+    # 南瓜相关
+    PUMPKIN_SEED = 30
+    PUMPKIN_PRODUCT = 31
+    PUMPKIN_PLANT = 32
+    
+    # 胡萝卜相关
+    CARROT_SEED = 40
+    CARROT_PRODUCT = 41
+    CARROT_PLANT = 42
+
+
 # 定义季节枚举
 class Season:
     SPRING = "Spring"
@@ -70,37 +103,37 @@ def create_crops():
     crops = {}
     
     # 小麦 - 春季作物
-    wheat_seed = Item(2, "Wheat Seed", ItemType.SEED, "A seed for planting wheat", price=10, sell_price=5)
-    wheat_product = Item(5, "Wheat", ItemType.PRODUCT, "Mature wheat, can be sold or used", sell_price=25)
-    wheat = Plant(4, "Wheat Plant", wheat_seed, 100, wheat_product, 5, 2, 1, 
+    wheat_seed = Item(ItemID.WHEAT_SEED, "Wheat Seed", ItemType.SEED, "A seed for planting wheat", price=10, sell_price=5)
+    wheat_product = Item(ItemID.WHEAT_PRODUCT, "Wheat", ItemType.PRODUCT, "Mature wheat, can be sold or used", sell_price=25)
+    wheat = Plant(ItemID.WHEAT_PLANT, "Wheat Plant", wheat_seed, 100, wheat_product, 5, 2, 1, 
                   Season.SPRING, (218, 165, 32))  # 金黄色
     crops['wheat'] = {'seed': wheat_seed, 'product': wheat_product, 'plant': wheat}
     
     # 番茄 - 夏季作物
-    tomato_seed = Item(10, "Tomato Seed", ItemType.SEED, "A seed for planting tomato", price=20, sell_price=10)
-    tomato_product = Item(11, "Tomato", ItemType.PRODUCT, "Fresh red tomato", sell_price=35)
-    tomato = Plant(12, "Tomato Plant", tomato_seed, 150, tomato_product, 6, 3, 1, 
+    tomato_seed = Item(ItemID.TOMATO_SEED, "Tomato Seed", ItemType.SEED, "A seed for planting tomato", price=20, sell_price=10)
+    tomato_product = Item(ItemID.TOMATO_PRODUCT, "Tomato", ItemType.PRODUCT, "Fresh red tomato", sell_price=35)
+    tomato = Plant(ItemID.TOMATO_PLANT, "Tomato Plant", tomato_seed, 150, tomato_product, 6, 3, 1, 
                    Season.SUMMER, (255, 99, 71))  # 番茄红色
     crops['tomato'] = {'seed': tomato_seed, 'product': tomato_product, 'plant': tomato}
     
     # 玉米 - 夏季作物
-    corn_seed = Item(20, "Corn Seed", ItemType.SEED, "A seed for planting corn", price=25, sell_price=12)
-    corn_product = Item(21, "Corn", ItemType.PRODUCT, "Golden corn cob", sell_price=45)
-    corn = Plant(22, "Corn Plant", corn_seed, 200, corn_product, 7, 2, 1, 
+    corn_seed = Item(ItemID.CORN_SEED, "Corn Seed", ItemType.SEED, "A seed for planting corn", price=25, sell_price=12)
+    corn_product = Item(ItemID.CORN_PRODUCT, "Corn", ItemType.PRODUCT, "Golden corn cob", sell_price=45)
+    corn = Plant(ItemID.CORN_PLANT, "Corn Plant", corn_seed, 200, corn_product, 7, 2, 1, 
                  Season.SUMMER, (255, 215, 0))  # 金色
     crops['corn'] = {'seed': corn_seed, 'product': corn_product, 'plant': corn}
     
     # 南瓜 - 秋季作物
-    pumpkin_seed = Item(30, "Pumpkin Seed", ItemType.SEED, "A seed for planting pumpkin", price=50, sell_price=25)
-    pumpkin_product = Item(31, "Pumpkin", ItemType.PRODUCT, "Large orange pumpkin", sell_price=100)
-    pumpkin = Plant(32, "Pumpkin Plant", pumpkin_seed, 300, pumpkin_product, 8, 1, 1, 
+    pumpkin_seed = Item(ItemID.PUMPKIN_SEED, "Pumpkin Seed", ItemType.SEED, "A seed for planting pumpkin", price=50, sell_price=25)
+    pumpkin_product = Item(ItemID.PUMPKIN_PRODUCT, "Pumpkin", ItemType.PRODUCT, "Large orange pumpkin", sell_price=100)
+    pumpkin = Plant(ItemID.PUMPKIN_PLANT, "Pumpkin Plant", pumpkin_seed, 300, pumpkin_product, 8, 1, 1, 
                     Season.AUTUMN, (255, 140, 0))  # 橙色
     crops['pumpkin'] = {'seed': pumpkin_seed, 'product': pumpkin_product, 'plant': pumpkin}
     
     # 胡萝卜 - 秋季作物
-    carrot_seed = Item(40, "Carrot Seed", ItemType.SEED, "A seed for planting carrot", price=15, sell_price=7)
-    carrot_product = Item(41, "Carrot", ItemType.PRODUCT, "Fresh orange carrot", sell_price=30)
-    carrot = Plant(42, "Carrot Plant", carrot_seed, 120, carrot_product, 5, 2, 1, 
+    carrot_seed = Item(ItemID.CARROT_SEED, "Carrot Seed", ItemType.SEED, "A seed for planting carrot", price=15, sell_price=7)
+    carrot_product = Item(ItemID.CARROT_PRODUCT, "Carrot", ItemType.PRODUCT, "Fresh orange carrot", sell_price=30)
+    carrot = Plant(ItemID.CARROT_PLANT, "Carrot Plant", carrot_seed, 120, carrot_product, 5, 2, 1, 
                    Season.AUTUMN, (255, 127, 80))  # 珊瑚色
     crops['carrot'] = {'seed': carrot_seed, 'product': carrot_product, 'plant': carrot}
     
