@@ -4,6 +4,7 @@ class ItemType:
     SEED = 2
     PLANT = 3
     PRODUCT = 4
+    CURRENCY = 5
 
 # 定义物品类
 class Item:

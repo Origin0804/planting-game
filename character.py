@@ -10,6 +10,7 @@ class Character:
         self.x = x
         self.y = y
         self.inventory = []  # Item list
+        self.coins = 100  # Starting coins
 
     def add_item(self, item):
         """
@@ -36,3 +37,21 @@ class Character:
         :return: The character's inventory list
         """
         return self.inventory
+
+    def add_coins(self, amount):
+        """
+        Add coins to the character
+        :param amount: The amount of coins to add
+        """
+        self.coins += amount
+
+    def spend_coins(self, amount):
+        """
+        Spend coins from the character
+        :param amount: The amount of coins to spend
+        :return: True if successful, False if not enough coins
+        """
+        if self.coins >= amount:
+            self.coins -= amount
+            return True
+        return False

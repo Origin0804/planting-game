@@ -1,8 +1,15 @@
 import pygame
 
 # 定义常量
-PLANT_COLOR = (0, 128, 0)
 TILE_SIZE = 32
+
+# 植物颜色字典
+PLANT_COLORS = {
+    "Wheat Plant": (218, 165, 32),    # 金黄色 - 小麦
+    "Tomato Plant": (255, 99, 71),    # 番茄红
+    "Corn Plant": (255, 215, 0),      # 玉米金色
+}
+DEFAULT_PLANT_COLOR = (0, 128, 0)     # 默认绿色
 
 # 初始化字体
 pygame.font.init()
@@ -90,8 +97,10 @@ class Soil(Block):
             x, y = self.position
             # 计算植物的大小，根据生长阶段动态变化
             plant_size = TILE_SIZE * (self.growth_stage / self.plant.max_stages)
+            # 获取植物颜色
+            plant_color = PLANT_COLORS.get(self.plant.name, DEFAULT_PLANT_COLOR)
             # 绘制植物矩形，使其居中显示在土地块上
-            pygame.draw.rect(screen, PLANT_COLOR, (x + (TILE_SIZE - plant_size) // 2,
+            pygame.draw.rect(screen, plant_color, (x + (TILE_SIZE - plant_size) // 2,
                                                    y + (TILE_SIZE - plant_size) // 2,
                                                    plant_size, plant_size))
             # 绘制生长阶段数字标注
