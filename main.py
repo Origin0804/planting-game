@@ -115,15 +115,24 @@ def draw_player(screen, x, y):
                      (x + 2 * TILE_SIZE // 3, y + 2 * head_radius + body_height + leg_length), 3)
 
 
-def get_seed_by_type(seed_name):
-    """根据种子名称获取对应的种子和植物"""
-    if seed_name in SHOP_ITEMS:
-        return SHOP_ITEMS[seed_name]["item"], SHOP_ITEMS[seed_name]["plant"]
-    return None, None
+def count_inventory_items(inventory):
+    """统计背包中每种物品的数量"""
+    item_counts = {}
+    for item in inventory:
+        key = (item.id, item.name)
+        if key not in item_counts:
+            item_counts[key] = {"item": item, "count": 0}
+        item_counts[key]["count"] += 1
+    return item_counts
 
 
 while running:
     current_time = pygame.time.get_ticks()  # 每次循环获取当前时间
+    mouse_x, mouse_y = pygame.mouse.get_pos()  # 获取鼠标位置（每帧只获取一次）
+    
+    # 预计算物品计数（用于商店和背包显示）
+    item_counts = count_inventory_items(player.inventory)
+    
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -270,7 +279,6 @@ while running:
         screen.blit(title_text, (shop_x + 10, shop_y + 5))
         
         item_y = shop_y + 30
-        mouse_x, mouse_y = pygame.mouse.get_pos()
         for seed_name, seed_info in SHOP_ITEMS.items():
             price = seed_info["price"]
             item_rect = pygame.Rect(shop_x + 5, item_y, SHOP_WIDTH - 10, 25)
@@ -284,13 +292,14 @@ while running:
             screen.blit(item_text, (shop_x + 10, item_y + 3))
             item_y += 30
         
-        # 显示种子数量
+        # 显示种子数量（使用预计算的物品计数）
         item_y += 10
         count_title = FONT.render("Your seeds:", True, BLACK)
         screen.blit(count_title, (shop_x + 10, item_y))
         item_y += 20
         for seed_name, seed_info in SHOP_ITEMS.items():
-            count = sum(1 for item in player.inventory if item.id == seed_info["item"].id)
+            seed_id = seed_info["item"].id
+            count = sum(data["count"] for (item_id, _), data in item_counts.items() if item_id == seed_id)
             count_text = FONT.render(f"  {seed_name}: {count}", True, BLACK)
             screen.blit(count_text, (shop_x + 10, item_y))
             item_y += 18
@@ -304,17 +313,9 @@ while running:
         screen.blit(title_text, (WIDTH - INVENTORY_WIDTH, 15))
         
         inventory_y = 45
-        mouse_x, mouse_y = pygame.mouse.get_pos()
         hovered_item = None
         
-        # 统计物品数量
-        item_counts = {}
-        for item in player.inventory:
-            key = (item.id, item.name)
-            if key not in item_counts:
-                item_counts[key] = {"item": item, "count": 0}
-            item_counts[key]["count"] += 1
-        
+        # 使用预计算的物品计数
         for key, data in item_counts.items():
             item = data["item"]
             count = data["count"]
